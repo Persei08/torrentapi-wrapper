@@ -105,23 +105,28 @@ var parseResponse = function (m) {
 };
 
 var chainCall = function (ua, app_id, query, mode) {
-    if (!query) {
-        if (!ua) throw new Error('Missing User-Agent parameter');
-        query = typeof ua === 'string' ? {query: ua} : ua;
-        ua = false;
-        if (!app_id) throw new Error('Missing app_id parameter');
+    // Waiting 2 seconds because api has a 1req/2s limit.
+    var waitTill = new Date(new Date().getTime() + 2 * 1000);
+    console.log("Waiting 2 seconds ...");
+    while(waitTill > new Date()){
+        if (!query) {
+            if (!ua) throw new Error('Missing User-Agent parameter');
+            query = typeof ua === 'string' ? {query: ua} : ua;
+            ua = false;
+            if (!app_id) throw new Error('Missing app_id parameter');
+        }
+        session.ua = ua;
+        session.app_id = app_id;
+        return getToken().then(function (tokens) {
+            return buildQuery(mode, query);
+        }).then(buildUrl).then(function (url) {
+            return got(url, {
+                headers: {
+                    'user-agent': session.ua
+                }
+            });
+        }).then(parseResponse);
     }
-    session.ua = ua;
-    session.app_id = app_id;
-    return getToken().then(function (tokens) {
-        return buildQuery(mode, query);
-    }).then(buildUrl).then(function (url) {
-        return got(url, {
-            headers: {
-                'user-agent': session.ua
-            }
-        });
-    }).then(parseResponse);
 };
 
 module.exports = {
